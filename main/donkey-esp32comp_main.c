@@ -11,30 +11,67 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_spi_flash.h"
+#include "ws2812_control.h"
 
+// PIN used to drive NeoPixel LEDs
+#define LED_PIN           6
+#define NUM_LEDS          1
+
+// How many NeoPixels are attached to the Arduino?
+#define NUMPIXELS      1
+#define TIMESTEPS      8 
+
+// Statuses
+#define INT_DISCONNECTED  0
+#define INT_RXERROR       1
+#define INT_CALIBRATE     2
+#define HOST_INIT         3
+#define HOST_MODE_USER    4
+#define HOST_MODE_LOCAL   5
+#define HOST_MODE_DISARMED   6
+ 
+// PIN used to connect Rx receiver
+#define  PWM_RC_STEERING_INPUT_PIN 5
+#define  PWM_RC_THROTTLE_INPUT_PIN 7
+#define  PWM_RC_CH5_INPUT_PIN 8
+#define  PWM_RC_CH6_INPUT_PIN 10
+#define  PWM_SPEEDOMETER_INPUT_PIN 12
+
+//Each 50ms, check and output value to serial link
+#define OUTPUTLOOP 50000
+
+// Global var used to capture Rx signal
+unsigned int pwm_steering_value = 0;
+unsigned int pwm_throttle_value = 0;
+unsigned int pwm_ch5_value = 0;
+unsigned int pwm_ch6_value = 0;
+unsigned int pwm_speedometer_value = 0;
+unsigned int freq_value = 0;
+unsigned int prev_steering_time = 0;
+unsigned int prev_throttle_time = 0;
+unsigned int prev_ch5_time = 0;
+unsigned int prev_ch6_time = 0;
+unsigned int prev_speedometer_time = 0;
+unsigned int prev_freq_time = 0;
+
+// Gloval var used to detect signal activity
+int steering_toggle = 0;
+int throttle_toggle = 0;
+int ch5_toggle = 0;
+int ch6_toggle = 0;
+int speedometer_toggle = 0;
+
+// GLobal buffer for serial output
+char buff [50] = {};
 
 void app_main()
 {
-    printf("Hello world!\n");
+  ws2812_control_init();
 
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    esp_chip_info(&chip_info);
-    printf("This is ESP32 chip with %d CPU cores, WiFi%s%s, ",
-            chip_info.cores,
-            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
-            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
+  struct led_state new_state;
+  new_state.leds[0] = RED;
+  new_state.leds[1] = GREEN;
+  new_state.leds[2] = BLUE;
 
-    printf("silicon revision %d, ", chip_info.revision);
-
-    printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
-            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
+  ws2812_write_leds(new_state);
 }
