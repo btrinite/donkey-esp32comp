@@ -11,11 +11,15 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_spi_flash.h"
-#include "ws2812_control.h"
 
 // PIN used to drive NeoPixel LEDs
-#define LED_PIN           6
-#define NUM_LEDS          1
+#define LED_PIN         6
+#define NUM_LEDS        1
+#include "ws2812_control.h"
+
+#define RED             0xFF0000
+#define GREEN           0x00FF00
+#define BLUE            0x0000FF
 
 // How many NeoPixels are attached to the Arduino?
 #define NUMPIXELS      1
