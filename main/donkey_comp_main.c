@@ -9,6 +9,9 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
+#include "esp_attr.h"
+#include "soc/rtc.h"
 #include "driver/ledc.h"
 #include "driver/mcpwm.h"
 #include "driver/uart.h"
@@ -41,16 +44,12 @@
 #define HOST_MODE_DISARMED   6
  
 // PIN used to connect Rx receiver
-#define  PWM_RC_STEERING_INPUT_PIN 5
-#define  PWM_RC_THROTTLE_INPUT_PIN 7
 #define  PWM_RC_CH5_INPUT_PIN 8
 #define  PWM_RC_CH6_INPUT_PIN 10
 #define  PWM_SPEEDOMETER_INPUT_PIN 12
 
 // PWM Output
 // PIN used to connect Actuators
-#define  PWM_RC_THROTTLE_OUTUT_PIN 15
-#define  PWM_RC_STEERING_OUTUT_PIN 17
 #define  PWM_OUTPUT_FREQ  50
 #define  PWM_OUTPUT_DUTY_RESOLUTION LEDC_TIMER_13_BIT 
 #define  PWM_OUTPUT_STEP ((1000000000/PWM_OUTPUT_FREQ)/((2^LEDC_TIMER_13_BIT)-1)) /* ns */
@@ -87,12 +86,32 @@ char buff [50] = {};
 #define PWM_RC_THROTTLE_OUTUT_PIN 16   //Set GPIO 15 as PWM0A
 #define PWM_RC_STEERING_OUTUT_PIN 17   //Set GPIO 15 as PWM1A
 
+#define PWM_RC_THROTTLE_INPUT_PIN   23   //Set GPIO 25 as  CAP1
+#define PWM_RC_STEERING_INPUT_PIN   25   //Set GPIO 23 as  CAP0
+
+#define CAP0_INT_EN BIT(27)  //Capture 0 interrupt bit
+#define CAP1_INT_EN BIT(28)  //Capture 1 interrupt bit
+#define CAP_SIG_NUM 2
+
+typedef struct {
+    uint32_t capture_signal;
+    mcpwm_capture_signal_t sel_cap_signal;
+} capture;
+
+xQueueHandle cap_queue;
+
+static mcpwm_dev_t *MCPWM[2] = {&MCPWM0, &MCPWM1};
+
 static void mcpwm_gpio_initialize()
 {
     printf("initializing mcpwm gpio...\n");
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, PWM_RC_THROTTLE_OUTUT_PIN);
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, PWM_RC_STEERING_OUTUT_PIN);
-}
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_0, PWM_RC_STEERING_INPUT_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_1, PWM_RC_THROTTLE_INPUT_PIN);
+    gpio_pulldown_en(PWM_RC_STEERING_INPUT_PIN);    //Enable pull down on CAP0   signal
+    gpio_pulldown_en(PWM_RC_THROTTLE_INPUT_PIN);    //Enable pull down on CAP1   signal
+  }
 
 /**
  * @brief motor moves in forward direction, with duty cycle = duty %
@@ -110,6 +129,45 @@ static void mcpwm_set_steering_pwm(int pwm_width_in_us)
   mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, pwm_width_in_us);
 }
 
+static void disp_captured_signal(void *arg)
+{
+    uint32_t *current_cap_value = (uint32_t *)malloc(sizeof(CAP_SIG_NUM));
+    uint32_t *previous_cap_value = (uint32_t *)malloc(sizeof(CAP_SIG_NUM));
+    capture evt;
+    while (1) {
+        xQueueReceive(cap_queue, &evt, portMAX_DELAY);
+        if (evt.sel_cap_signal == MCPWM_SELECT_CAP0) {
+            current_cap_value[0] = evt.capture_signal - previous_cap_value[0];
+            previous_cap_value[0] = evt.capture_signal;
+            current_cap_value[0] = (current_cap_value[0] / 10000) * (10000000000 / rtc_clk_apb_freq_get());
+            printf("CAP0 : %d us\n", current_cap_value[0]);
+        }
+        if (evt.sel_cap_signal == MCPWM_SELECT_CAP1) {
+            current_cap_value[1] = evt.capture_signal - previous_cap_value[1];
+            previous_cap_value[1] = evt.capture_signal;
+            current_cap_value[1] = (current_cap_value[1] / 10000) * (10000000000 / rtc_clk_apb_freq_get());
+            printf("CAP1 : %d us\n", current_cap_value[1]);
+        }
+    }
+}
+
+static void IRAM_ATTR isr_handler()
+{
+    uint32_t mcpwm_intr_status;
+    capture evt;
+    mcpwm_intr_status = MCPWM[MCPWM_UNIT_0]->int_st.val; //Read interrupt status
+    if (mcpwm_intr_status & CAP0_INT_EN) { //Check for interrupt on rising edge on CAP0 signal
+        evt.capture_signal = mcpwm_capture_signal_get_value(MCPWM_UNIT_0, MCPWM_SELECT_CAP0); //get capture signal counter value
+        evt.sel_cap_signal = MCPWM_SELECT_CAP0;
+        xQueueSendFromISR(cap_queue, &evt, NULL);
+    }
+    if (mcpwm_intr_status & CAP1_INT_EN) { //Check for interrupt on rising edge on CAP0 signal
+        evt.capture_signal = mcpwm_capture_signal_get_value(MCPWM_UNIT_0, MCPWM_SELECT_CAP1); //get capture signal counter value
+        evt.sel_cap_signal = MCPWM_SELECT_CAP1;
+        xQueueSendFromISR(cap_queue, &evt, NULL);
+    }
+    MCPWM[MCPWM_UNIT_0]->int_clr.val = mcpwm_intr_status;
+}
 
 /**
  * @brief Configure MCPWM module for brushed dc motor
@@ -131,6 +189,17 @@ static void mcpwm_init_control()
     mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_1, &pwm_config);    //Configure PWM1A & PWM1B with above settings
     mcpwm_set_duty_type(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, MCPWM_DUTY_MODE_0);
     mcpwm_set_duty_type(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, MCPWM_DUTY_MODE_0);
+
+    //7. Capture configuration
+    //comment if you don't want to use capture submodule, also u can comment the capture gpio signals
+    //configure CAP0 and CAP1 signal to start capture counter on rising edge
+    //In general practice you can connect Capture  to external signal, measure time between rising edge or falling edge and take action accordingly
+    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP0, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 800,000,000 counts is equal to one second
+    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP2, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 800,000,000 counts is equal to one second
+    //enable interrupt, so each this a rising edge occurs interrupt is triggered
+    MCPWM[MCPWM_UNIT_0]->int_ena.val = CAP0_INT_EN | CAP1_INT_EN;  //Enable interrupt on  CAP0, CAP1 and CAP2 signal
+    mcpwm_isr_register(MCPWM_UNIT_0, isr_handler, NULL, ESP_INTR_FLAG_IRAM, NULL);  //Set ISR Handler
+
 }
 
 void app_main()
