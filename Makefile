@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME :=donkey-esp32comp 
+PROJECT_NAME := donkey_comp
 
 include $(IDF_PATH)/make/project.mk
 
