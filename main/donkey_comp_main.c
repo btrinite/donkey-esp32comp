@@ -208,6 +208,9 @@ void app_main()
   uart_set_baudrate(UART_NUM_0, 2000000); 
   ws2812_control_init();
   mcpwm_init_control();
+  cap_queue = xQueueCreate(1, sizeof(capture)); //comment if you don't want to use capture module
+  xTaskCreate(disp_captured_signal, "mcpwm_config", 4096, NULL, 5, NULL);  //comment if you don't want to use capture module
+
   // Set configuration of timer0 for high speed channels
   //
   while(1) {
