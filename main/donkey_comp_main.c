@@ -11,6 +11,7 @@
 #include "freertos/task.h"
 #include "driver/ledc.h"
 #include "driver/mcpwm.h"
+#include "driver/uart.h"
 #include "soc/mcpwm_reg.h"
 #include "soc/mcpwm_struct.h"
 #include "esp_system.h"
@@ -48,11 +49,11 @@
 
 // PWM Output
 // PIN used to connect Actuators
-#define  PWM_RC_THROTTLE_OUTUT_PIN 18
-#define  PWM_RC_STEERING_OUTUT_PIN 19
+#define  PWM_RC_THROTTLE_OUTUT_PIN 15
+#define  PWM_RC_STEERING_OUTUT_PIN 17
 #define  PWM_OUTPUT_FREQ  50
 #define  PWM_OUTPUT_DUTY_RESOLUTION LEDC_TIMER_13_BIT 
-#define  PWM_OUTPUT_STEP (((1/PWM_OUTPUT_FREQ)*1000000000)/((2^LEDC_TIMER_13_BIT)-1)) /* ns */
+#define  PWM_OUTPUT_STEP ((1000000000/PWM_OUTPUT_FREQ)/((2^LEDC_TIMER_13_BIT)-1)) /* ns */
 
 //Each 50ms, check and output value to serial link
 #define OUTPUTLOOP 50000
@@ -83,35 +84,30 @@ char buff [50] = {};
 
 /*PWM based on */
 
-#define GPIO_PWM0A_OUT 15   //Set GPIO 15 as PWM0A
-#define GPIO_PWM0B_OUT 16   //Set GPIO 16 as PWM0B
-
-#define GPIO_PWM1A_OUT 17   //Set GPIO 15 as PWM1A
-#define GPIO_PWM1B_OUT 18   //Set GPIO 16 as PWM1B
+#define PWM_RC_THROTTLE_OUTUT_PIN 16   //Set GPIO 15 as PWM0A
+#define PWM_RC_STEERING_OUTUT_PIN 17   //Set GPIO 15 as PWM1A
 
 static void mcpwm_gpio_initialize()
 {
     printf("initializing mcpwm gpio...\n");
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, GPIO_PWM0A_OUT);
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, GPIO_PWM0B_OUT);
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, GPIO_PWM1A_OUT);
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1B, GPIO_PWM1B_OUT);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, PWM_RC_THROTTLE_OUTUT_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, PWM_RC_STEERING_OUTUT_PIN);
 }
 
 /**
  * @brief motor moves in forward direction, with duty cycle = duty %
  */
-static void mcpwm_set_throttle_pwm(int pwm_width)
+static void mcpwm_set_throttle_pwm(int pwm_width_in_us)
 {
-  mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, pwm_width*1000);
+  mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, pwm_width_in_us);
 }
 
 /**
  * @brief motor moves in backward direction, with duty cycle = duty %
  */
-static void mcpwm_set_steering_pwm(int pwm_width)
+static void mcpwm_set_steering_pwm(int pwm_width_in_us)
 {
-  mcpwm_set_duty_in_us(MCPWM_UNIT_1, MCPWM_TIMER_0, MCPWM_OPR_A, pwm_width*1000);
+  mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, pwm_width_in_us);
 }
 
 
@@ -126,8 +122,8 @@ static void mcpwm_init_control()
     //2. initial mcpwm configuration
     printf("Configuring Initial Parameters of mcpwm...\n");
     mcpwm_config_t pwm_config;
-    pwm_config.frequency = 100;    //frequency = 500Hz,
-    pwm_config.cmpr_a = (2000/1500);    //duty cycle of PWMxA = 0
+    pwm_config.frequency = 50;    //frequency = 500Hz,
+    pwm_config.cmpr_a = (float)((1500.0*100.0)/20000.0);    //duty cycle of PWMxA = 0
     pwm_config.cmpr_b = 0;    //duty cycle of PWMxb = 0
     pwm_config.counter_mode = MCPWM_UP_COUNTER;
     pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
@@ -137,47 +133,28 @@ static void mcpwm_init_control()
     mcpwm_set_duty_type(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, MCPWM_DUTY_MODE_0);
 }
 
-
-/* PWM based on ledc driver*/
-
-const ledc_timer_config_t ledc_timer = {
-  .duty_resolution = PWM_OUTPUT_DUTY_RESOLUTION, // resolution of PWM duty
-  .freq_hz = 50,                      // frequency of PWM signal
-  .speed_mode = LEDC_HIGH_SPEED_MODE,           // timer mode
-  .timer_num = LEDC_TIMER_0            // timer index
-};
-
-ledc_channel_config_t ledc_throttle_channel = {
-  .channel    = LEDC_CHANNEL_0,
-  .duty       = 7,
-  .gpio_num   = PWM_RC_THROTTLE_OUTUT_PIN,
-  .speed_mode = LEDC_HIGH_SPEED_MODE,
-  .hpoint     = 0,
-  .timer_sel  = LEDC_TIMER_0
-};
-
-ledc_channel_config_t ledc_steering_channel = {
-  .channel    = LEDC_CHANNEL_1,
-  .duty       = 7,
-  .gpio_num   = PWM_RC_STEERING_OUTUT_PIN,
-  .speed_mode = LEDC_HIGH_SPEED_MODE,
-  .hpoint     = 0,
-  .timer_sel  = LEDC_TIMER_0
-};
-
-void set_pwm_length (ledc_channel_config_t * config, int length)
-{
-    config->duty = round(((length*1000*1000)/PWM_OUTPUT_STEP));
-}
-
 void app_main()
 {
+  int tick=0;
+  uart_set_baudrate(UART_NUM_0, 2000000); 
   ws2812_control_init();
   mcpwm_init_control();
   // Set configuration of timer0 for high speed channels
-  ledc_timer_config(&ledc_timer);
-  set_pwm_length (&ledc_throttle_channel, 1500);
-  set_pwm_length (&ledc_steering_channel, 1500);
-  ledc_channel_config(&ledc_throttle_channel);
-  ledc_channel_config(&ledc_steering_channel);
+  //
+  while(1) {
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    printf("tick\n");
+    switch (tick%3) {
+      case 0:
+        mcpwm_set_throttle_pwm(1000);
+      break;
+      case 1:
+        mcpwm_set_throttle_pwm(1500);
+      break;
+      case 2:
+        mcpwm_set_throttle_pwm(2000);
+      break;
+    };
+    tick++;
+  };
 }
