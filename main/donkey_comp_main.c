@@ -151,10 +151,12 @@ static void disp_captured_signal(void *arg)
     }
 }
 
+unsigned long itcount=0;
 static void IRAM_ATTR isr_handler()
 {
     uint32_t mcpwm_intr_status;
     capture evt;
+    itcount++;
     mcpwm_intr_status = MCPWM[MCPWM_UNIT_0]->int_st.val; //Read interrupt status
     if (mcpwm_intr_status & CAP0_INT_EN) { //Check for interrupt on rising edge on CAP0 signal
         evt.capture_signal = mcpwm_capture_signal_get_value(MCPWM_UNIT_0, MCPWM_SELECT_CAP0); //get capture signal counter value
@@ -207,15 +209,15 @@ void app_main()
   int tick=0;
   uart_set_baudrate(UART_NUM_0, 2000000); 
   ws2812_control_init();
-  mcpwm_init_control();
   cap_queue = xQueueCreate(1, sizeof(capture)); //comment if you don't want to use capture module
+  mcpwm_init_control();
   xTaskCreate(disp_captured_signal, "mcpwm_config", 4096, NULL, 5, NULL);  //comment if you don't want to use capture module
 
   // Set configuration of timer0 for high speed channels
   //
   while(1) {
     vTaskDelay(5000 / portTICK_PERIOD_MS);
-    printf("tick\n");
+    printf("tick %d\n", itcount);
     switch (tick%3) {
       case 0:
         mcpwm_set_throttle_pwm(1000);
