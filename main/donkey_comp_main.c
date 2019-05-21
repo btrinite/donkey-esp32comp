@@ -107,8 +107,8 @@ static void mcpwm_gpio_initialize()
     printf("initializing mcpwm gpio...\n");
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, PWM_RC_THROTTLE_OUTUT_PIN);
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, PWM_RC_STEERING_OUTUT_PIN);
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_0, PWM_RC_STEERING_INPUT_PIN);
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_1, PWM_RC_THROTTLE_INPUT_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_0, PWM_RC_THROTTLE_INPUT_PIN);
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_1, PWM_RC_STEERING_INPUT_PIN);
     gpio_pulldown_en(PWM_RC_STEERING_INPUT_PIN);    //Enable pull down on CAP0   signal
     gpio_pulldown_en(PWM_RC_THROTTLE_INPUT_PIN);    //Enable pull down on CAP1   signal
   }
@@ -195,7 +195,7 @@ static void mcpwm_init_control()
     //configure CAP0 and CAP1 signal to start capture counter on rising edge
     //In general practice you can connect Capture  to external signal, measure time between rising edge or falling edge and take action accordingly
     mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP0, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 800,000,000 counts is equal to one second
-    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP2, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 800,000,000 counts is equal to one second
+    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP1, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 800,000,000 counts is equal to one second
     //enable interrupt, so each this a rising edge occurs interrupt is triggered
     MCPWM[MCPWM_UNIT_0]->int_ena.val = CAP0_INT_EN | CAP1_INT_EN;  //Enable interrupt on  CAP0, CAP1 and CAP2 signal
     mcpwm_isr_register(MCPWM_UNIT_0, isr_handler, NULL, ESP_INTR_FLAG_IRAM, NULL);  //Set ISR Handler
