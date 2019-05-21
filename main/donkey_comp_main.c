@@ -217,7 +217,7 @@ void app_main()
   //
   while(1) {
     vTaskDelay(5000 / portTICK_PERIOD_MS);
-    printf("tick %d\n", itcount);
+    printf("tick %ld\n", itcount);
     switch (tick%3) {
       case 0:
         mcpwm_set_throttle_pwm(1000);
