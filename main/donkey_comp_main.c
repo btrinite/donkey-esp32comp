@@ -139,13 +139,13 @@ static void disp_captured_signal(void *arg)
         if (evt.sel_cap_signal == MCPWM_SELECT_CAP0) {
             current_cap_value[0] = evt.capture_signal - previous_cap_value[0];
             previous_cap_value[0] = evt.capture_signal;
-            current_cap_value[0] = (current_cap_value[0] / 10000) * (10000000000 / rtc_clk_apb_freq_get());
+            current_cap_value[0] = (current_cap_value[0] / 10000) * (1000000000 / rtc_clk_apb_freq_get());
             printf("CAP0 : %d us\n", current_cap_value[0]);
         }
         if (evt.sel_cap_signal == MCPWM_SELECT_CAP1) {
             current_cap_value[1] = evt.capture_signal - previous_cap_value[1];
             previous_cap_value[1] = evt.capture_signal;
-            current_cap_value[1] = (current_cap_value[1] / 10000) * (10000000000 / rtc_clk_apb_freq_get());
+            current_cap_value[1] = (current_cap_value[1] / 10000) * (1000000000 / rtc_clk_apb_freq_get());
             printf("CAP1 : %d us\n", current_cap_value[1]);
         }
     }
@@ -196,8 +196,8 @@ static void mcpwm_init_control()
     //comment if you don't want to use capture submodule, also u can comment the capture gpio signals
     //configure CAP0 and CAP1 signal to start capture counter on rising edge
     //In general practice you can connect Capture  to external signal, measure time between rising edge or falling edge and take action accordingly
-    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP0, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 800,000,000 counts is equal to one second
-    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP1, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 800,000,000 counts is equal to one second
+    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP0, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 80,000,000 counts is equal to one second
+    mcpwm_capture_enable(MCPWM_UNIT_0, MCPWM_SELECT_CAP1, MCPWM_POS_EDGE, 0);  //capture signal on rising edge, prescale = 0 i.e. 80,000,000 counts is equal to one second
     //enable interrupt, so each this a rising edge occurs interrupt is triggered
     MCPWM[MCPWM_UNIT_0]->int_ena.val = CAP0_INT_EN | CAP1_INT_EN;  //Enable interrupt on  CAP0, CAP1 and CAP2 signal
     mcpwm_isr_register(MCPWM_UNIT_0, isr_handler, NULL, ESP_INTR_FLAG_IRAM, NULL);  //Set ISR Handler
