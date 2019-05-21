@@ -109,8 +109,8 @@ static void mcpwm_gpio_initialize()
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, PWM_RC_STEERING_OUTUT_PIN);
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_0, PWM_RC_THROTTLE_INPUT_PIN);
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM_CAP_1, PWM_RC_STEERING_INPUT_PIN);
-    gpio_pulldown_en(PWM_RC_STEERING_INPUT_PIN);    //Enable pull down on CAP0   signal
-    gpio_pulldown_en(PWM_RC_THROTTLE_INPUT_PIN);    //Enable pull down on CAP1   signal
+    gpio_pulldown_en(PWM_RC_THROTTLE_INPUT_PIN);    //Enable pull down on CAP0   signal
+    gpio_pulldown_en(PWM_RC_STEERING_INPUT_PIN);    //Enable pull down on CAP1   signal
   }
 
 /**
