@@ -24,17 +24,16 @@
 #include "esp_spi_flash.h"
 #include "esp_timer.h"
 
+#include "string.h"
+
+#define MAX_GPIO 40
+
 // PIN used to drive NeoPixel LEDs
-#define LED_PIN         6
+#define LED_PIN         15
 #define NUM_LEDS        1
 #include "ws2812_control.h"
 
-#define RED             0xFF0000
-#define GREEN           0x00FF00
-#define BLUE            0x0000FF
-
 // How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS      1
 #define TIMESTEPS      8 
 
 // Statuses
@@ -46,21 +45,9 @@
 #define HOST_MODE_LOCAL   5
 #define HOST_MODE_DISARMED   6
  
-// PIN used to connect Rx receiver
-#define  PWM_RC_CH5_INPUT_PIN 8
-#define  PWM_RC_CH6_INPUT_PIN 10
-#define  PWM_SPEEDOMETER_INPUT_PIN 12
-
-// PWM Output
-// PIN used to connect Actuators
-#define  PWM_OUTPUT_FREQ  50
-#define  PWM_OUTPUT_DUTY_RESOLUTION LEDC_TIMER_13_BIT 
-#define  PWM_OUTPUT_STEP ((1000000000/PWM_OUTPUT_FREQ)/((2^LEDC_TIMER_13_BIT)-1)) /* ns */
-#define  RMT_TICK_10_US    (80000000/RMT_CLK_DIV/100000)   /*!< RMT counter value for 10 us.(Source clock is APB clock) */
-#define  rmt_item32_tIMEOUT_US  9500 
 
 //Each 50ms, check and output value to serial link
-#define OUTPUTLOOP 50000
+#define OUTPUTLOOP 50
 
 // Global var used to capture Rx signal
 unsigned int pwm_steering_value = 0;
@@ -91,13 +78,20 @@ char buff [50] = {};
 #define PWM_RC_THROTTLE_OUTUT_PIN 16   //Set GPIO 15 as PWM0A
 #define PWM_RC_STEERING_OUTUT_PIN 17   //Set GPIO 15 as PWM1A
 
-#define RMT_RX_CHANNEL    0     /*!< RMT channel for receiver */
 #define RMT_CLK_DIV      100    /*!< RMT counter clock divider */
-#define PWM_RC_THROTTLE_INPUT_PIN   23   //Set GPIO 25 as  CAP1
-#define PWM_RC_STEERING_INPUT_PIN   25   //Set GPIO 23 as  CAP0
 
-#define GPIO_INPUT_PIN_SEL  ((1ULL<<PWM_RC_STEERING_INPUT_PIN) | (1ULL<<PWM_RC_THROTTLE_INPUT_PIN))
+// PIN used to connect Rx receiver
+#define PWM_RC_THROTTLE_INPUT_PIN   25   
+#define PWM_RC_STEERING_INPUT_PIN   26   
+#define PWM_RC_CH5_INPUT_PIN        27
+#define PWM_RC_CH6_INPUT_PIN        14
+#define PWM_SPEEDOMETER_INPUT_PIN   12
 
+#define GPIO_INPUT_PIN_SEL  ((1ULL<<PWM_RC_STEERING_INPUT_PIN) | (1ULL<<PWM_RC_THROTTLE_INPUT_PIN) | (1ULL<<PWM_RC_CH5_INPUT_PIN) | (1ULL<<PWM_RC_CH6_INPUT_PIN) | (1ULL<<PWM_SPEEDOMETER_INPUT_PIN))
+
+//
+// PWM Output
+//
 
 static void mcpwm_gpio_initialize()
 {
@@ -151,8 +145,8 @@ typedef struct {
   uint32_t t1;
 } SIGNAL_TIMING;
 
-SIGNAL_TIMING pwm_timing[34];
-uint32_t pwm_length[34];
+SIGNAL_TIMING pwm_timing[MAX_GPIO];
+uint32_t pwm_length[MAX_GPIO];
 
 static void IRAM_ATTR gpio_isr_handler(void* arg)
 {    
@@ -168,6 +162,10 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
       pwm_length[gpio_num] = pwm_timing[gpio_num].t1 - pwm_timing[gpio_num].t0;
     }
 }
+
+//
+// PWM INPUT
+//
 
 void init_rx_gpio (void)
 {
@@ -186,35 +184,152 @@ void init_rx_gpio (void)
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     //hook isr handler for specific gpio pin
     gpio_isr_handler_add(PWM_RC_THROTTLE_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_THROTTLE_INPUT_PIN);
-    //hook isr handler for specific gpio pin
     gpio_isr_handler_add(PWM_RC_STEERING_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_STEERING_INPUT_PIN);
-
-
-
+    gpio_isr_handler_add(PWM_RC_CH5_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_CH5_INPUT_PIN);
+    gpio_isr_handler_add(PWM_RC_CH6_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_CH6_INPUT_PIN);
+    gpio_isr_handler_add(PWM_RC_CH6_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_CH6_INPUT_PIN);
+    gpio_isr_handler_add(PWM_SPEEDOMETER_INPUT_PIN, gpio_isr_handler, (void*) PWM_SPEEDOMETER_INPUT_PIN);
 }
+
+// --------------------------------------
+// LED Part
+// --------------------------------------
+
+#define COMPCOLOR(r, g, b) (r<<16)|(g<<8)|(b)
+
+struct Led {
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
+  unsigned char timing;
+} ;
+
+struct Led leds[NUM_LEDS];
+struct led_state led_new_state;
+
+void switchOffLed() {
+  for(int i=0;i<NUM_LEDS;i++){
+    led_new_state.leds[0]=COMPCOLOR(0,0,0);
+    ws2812_write_leds(led_new_state);
+  }    
+}
+
+void updateLed() {
+  static int seq = 0;
+
+  for(int i=0;i<NUM_LEDS;i++) {
+    if (leds[i].timing>>seq & 0x01) {
+      led_new_state.leds[0]=COMPCOLOR(leds[i].r,leds[i].g,leds[i].b);
+    } else {
+      led_new_state.leds[0]=COMPCOLOR(0,0,0);
+    }
+    ws2812_write_leds(led_new_state);
+  }  
+  seq=(seq+1)%TIMESTEPS;
+}
+
+void setLed (unsigned char lednum, unsigned char r, unsigned char g, unsigned char b, unsigned char timing) {
+  if (lednum < NUM_LEDS) {
+    leds[lednum].r=r;
+    leds[lednum].g=g;
+    leds[lednum].b=b;
+    leds[lednum].timing = timing;
+  }
+}
+
+void displayStatusOnLED (int status)
+{
+  static int _last_status = 0;
+  if (status != _last_status) {
+    _last_status = status;
+#ifdef DEBUG
+    Serial.print("New status : ");
+    Serial.println(status);
+#endif
+    if (status==INT_CALIBRATE) {
+      // fast white blink
+      setLed (0,0xff,0xff,0xff,0x55);
+      setLed (1,0xff,0xff,0xff,0x55);
+    }
+    if (status==HOST_INIT) {
+      // Slow red blink
+      setLed (0,0xff,0x00,0x0,0x18);
+    }
+    if (status==HOST_MODE_USER) {
+      // Slow green blink
+      setLed (0,0x00,0xff,0x00,0x18);
+    }
+    if (status==HOST_MODE_LOCAL) {
+      // Slow blue blink
+      setLed (0,0x00,0x00,0xFF,0x18);
+    }
+    if (status==INT_DISCONNECTED) {
+      // medium red blink
+      setLed (0,0xff,0x00,0x00,0x55);
+    }
+    if (status==INT_RXERROR) {
+      // fastred blink
+      setLed (0,0xff,0x00,0x00,0x33);
+    }
+    if (status==HOST_MODE_DISARMED) {
+      // fast green blink
+      setLed (0,0x00,0xff,0x00,0x55);
+    }
+  }
+}
+void processStatusFromHost (const char *status) {
+
+  if (strcmp(status, "init")==0) {
+    displayStatusOnLED(HOST_INIT);
+  }
+  if (strcmp(status, "disarmed")==0) {
+    displayStatusOnLED(HOST_MODE_DISARMED);
+  }
+  if (strcmp(status, "user")==0) {
+    displayStatusOnLED(HOST_MODE_USER);
+  }
+  if (strcmp(status, "local")==0) {
+    displayStatusOnLED(HOST_MODE_LOCAL);
+  }
+}
+
+void timedCheckOutput()
+{
+  uint32_t t = esp_timer_get_time()/1000;
+  if (pwm_length[PWM_RC_THROTTLE_INPUT_PIN] == 0) {
+    sprintf(buff, "%d,-1,-1,-1,-1,-1,-1\n", t);
+     displayStatusOnLED(INT_RXERROR);   
+  } else {
+    sprintf(buff, "%d,%d,%d,%d,%d,%d\n", t, 
+    pwm_length[PWM_RC_STEERING_INPUT_PIN], 
+    pwm_length[PWM_RC_THROTTLE_INPUT_PIN], 
+    pwm_length[PWM_RC_CH5_INPUT_PIN], 
+    pwm_length[PWM_RC_CH6_INPUT_PIN],
+    pwm_length[PWM_SPEEDOMETER_INPUT_PIN]);
+  }
+  printf(buff);    
+  memset(pwm_length, 0, sizeof(pwm_length[0])*MAX_GPIO);   
+}
+
+//
+// MAIN
+//
+
 void app_main()
 {
   int tick=0;
   uart_set_baudrate(UART_NUM_0, 2000000); 
+  memset (leds, 0, sizeof(leds));
   ws2812_control_init();
   mcpwm_init_control();
   init_rx_gpio();
+  switchOffLed();
+  displayStatusOnLED(INT_DISCONNECTED);   
+
   // Set configuration of timer0 for high speed channels
   //
   while(1) {
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-    printf("tick %d %d %d\n", tick, pwm_length[PWM_RC_THROTTLE_INPUT_PIN], pwm_length[PWM_RC_STEERING_INPUT_PIN]);
-    switch (tick%3) {
-      case 0:
-        mcpwm_set_throttle_pwm(1000);
-      break;
-      case 1:
-        mcpwm_set_throttle_pwm(1500);
-      break;
-      case 2:
-        mcpwm_set_throttle_pwm(2000);
-      break;
-    };
-    tick++;
+    vTaskDelay(OUTPUTLOOP / portTICK_PERIOD_MS);
+    timedCheckOutput();
   };
 }
