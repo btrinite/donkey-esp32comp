@@ -148,8 +148,11 @@ typedef struct {
 SIGNAL_TIMING pwm_timing[MAX_GPIO];
 uint32_t pwm_length[MAX_GPIO];
 
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
 static void IRAM_ATTR gpio_isr_handler(void* arg)
 {    
+    portENTER_CRITICAL_ISR(&mux);
     uint32_t gpio_num = (uint32_t) arg;
     uint32_t t = esp_timer_get_time();
     if (gpio_get_level(gpio_num) == 1) {
@@ -161,6 +164,7 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
       if (t >= pwm_timing[gpio_num].t0)
       pwm_length[gpio_num] = pwm_timing[gpio_num].t1 - pwm_timing[gpio_num].t0;
     }
+    portEXIT_CRITICAL_ISR(&mux);
 }
 
 //
