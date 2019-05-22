@@ -217,15 +217,19 @@ void switchOffLed() {
 void updateLed() {
   static int seq = 0;
 
-  for(int i=0;i<NUM_LEDS;i++) {
-    if (leds[i].timing>>seq & 0x01) {
-      led_new_state.leds[0]=COMPCOLOR(leds[i].r,leds[i].g,leds[i].b);
-    } else {
-      led_new_state.leds[0]=COMPCOLOR(0,0,0);
-    }
-    ws2812_write_leds(led_new_state);
-  }  
-  seq=(seq+1)%TIMESTEPS;
+  while(1) {
+    for(int i=0;i<NUM_LEDS;i++) {
+      if (leds[i].timing>>seq & 0x01) {
+        led_new_state.leds[0]=COMPCOLOR(leds[i].r,leds[i].g,leds[i].b);
+      } else {
+        led_new_state.leds[0]=COMPCOLOR(0,0,0);
+      }
+      ws2812_write_leds(led_new_state);
+    }  
+    seq=(seq+1)%TIMESTEPS;
+    vTaskDelay((1000/TIMESTEPS) / portTICK_PERIOD_MS);
+  }
+  vTaskDelete( NULL );
 }
 
 void setLed (unsigned char lednum, unsigned char r, unsigned char g, unsigned char b, unsigned char timing) {
