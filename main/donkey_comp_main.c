@@ -198,7 +198,7 @@ void app_main()
   uart_set_baudrate(UART_NUM_0, 2000000); 
   ws2812_control_init();
   mcpwm_init_control();
-
+  init_rx_gpio();
   // Set configuration of timer0 for high speed channels
   //
   while(1) {
