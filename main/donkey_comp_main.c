@@ -187,7 +187,6 @@ void init_rx_gpio (void)
     gpio_isr_handler_add(PWM_RC_STEERING_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_STEERING_INPUT_PIN);
     gpio_isr_handler_add(PWM_RC_CH5_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_CH5_INPUT_PIN);
     gpio_isr_handler_add(PWM_RC_CH6_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_CH6_INPUT_PIN);
-    gpio_isr_handler_add(PWM_RC_CH6_INPUT_PIN, gpio_isr_handler, (void*) PWM_RC_CH6_INPUT_PIN);
     gpio_isr_handler_add(PWM_SPEEDOMETER_INPUT_PIN, gpio_isr_handler, (void*) PWM_SPEEDOMETER_INPUT_PIN);
 }
 
