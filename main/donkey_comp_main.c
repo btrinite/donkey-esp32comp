@@ -144,7 +144,6 @@ static void mcpwm_init_control()
     mcpwm_set_duty_type(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, MCPWM_DUTY_MODE_0);
 }
 
-static xQueueHandle gpio_evt_queue = NULL;
 #define ESP_INTR_FLAG_DEFAULT 0
 
 typedef struct {
@@ -183,9 +182,6 @@ void init_rx_gpio (void)
     io_conf.pull_up_en = 1;
     gpio_config(&io_conf);
 
-    //create a queue to handle gpio event from isr
-    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-
     //install gpio isr service
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     //hook isr handler for specific gpio pin
@@ -207,7 +203,7 @@ void app_main()
   //
   while(1) {
     vTaskDelay(5000 / portTICK_PERIOD_MS);
-    printf("tick %d\n", tick);
+    printf("tick %d %d %d\n", tick, pwm_length[PWM_RC_THROTTLE_INPUT_PIN], pwm_length[PWM_RC_STEERING_INPUT_PIN]);
     switch (tick%3) {
       case 0:
         mcpwm_set_throttle_pwm(1000);
