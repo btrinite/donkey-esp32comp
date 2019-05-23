@@ -333,6 +333,8 @@ void app_main()
   switchOffLed();
   displayStatusOnLED(INT_DISCONNECTED);   
 
+  mcpwm_set_throttle_pwm(1500);
+  mcpwm_set_steering_pwm(2000);
   // Set configuration of timer0 for high speed channels
   //
   while(1) {
