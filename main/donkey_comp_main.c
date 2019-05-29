@@ -75,8 +75,8 @@ char buff [50] = {};
 
 /*PWM based on */
 
-#define PWM_RC_THROTTLE_OUTUT_PIN 33   //Set GPIO 15 as PWM0A
-#define PWM_RC_STEERING_OUTUT_PIN 32   //Set GPIO 15 as PWM1A
+#define PWM_RC_THROTTLE_OUTUT_PIN 35   //Set GPIO 15 as PWM0A
+#define PWM_RC_STEERING_OUTUT_PIN 34   //Set GPIO 15 as PWM1A
 
 #define RMT_CLK_DIV      100    /*!< RMT counter clock divider */
 
