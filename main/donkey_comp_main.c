@@ -75,8 +75,8 @@ char buff [50] = {};
 
 /*PWM based on */
 
-#define PWM_RC_THROTTLE_OUTUT_PIN 16   //Set GPIO 15 as PWM0A
-#define PWM_RC_STEERING_OUTUT_PIN 17   //Set GPIO 15 as PWM1A
+#define PWM_RC_THROTTLE_OUTUT_PIN 33   //Set GPIO 15 as PWM0A
+#define PWM_RC_STEERING_OUTUT_PIN 32   //Set GPIO 15 as PWM1A
 
 #define RMT_CLK_DIV      100    /*!< RMT counter clock divider */
 
@@ -308,8 +308,8 @@ void timedCheckOutput()
      displayStatusOnLED(INT_RXERROR);   
   } else {
     sprintf(buff, "%d,%d,%d,%d,%d,%d\n", t, 
-    pwm_length[PWM_RC_STEERING_INPUT_PIN], 
     pwm_length[PWM_RC_THROTTLE_INPUT_PIN], 
+    pwm_length[PWM_RC_STEERING_INPUT_PIN], 
     pwm_length[PWM_RC_CH5_INPUT_PIN], 
     pwm_length[PWM_RC_CH6_INPUT_PIN],
     pwm_length[PWM_SPEEDOMETER_INPUT_PIN]);
