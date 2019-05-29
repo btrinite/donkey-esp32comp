@@ -48,7 +48,7 @@
 
 //Each 50ms, check and output value to serial link
 #define OUTPUTLOOP 50
-
+#define PWM_FREQ 60
 // Global var used to capture Rx signal
 unsigned int pwm_steering_value = 0;
 unsigned int pwm_throttle_value = 0;
@@ -127,8 +127,8 @@ static void mcpwm_init_control()
     //2. initial mcpwm configuration
     printf("Configuring Initial Parameters of mcpwm...\n");
     mcpwm_config_t pwm_config;
-    pwm_config.frequency = 50;    //frequency = 500Hz,
-    pwm_config.cmpr_a = (float)((1500.0*100.0)/20000.0);    //duty cycle of PWMxA = 0
+    pwm_config.frequency = PWM_FREQ;    //frequency = 500Hz,
+    pwm_config.cmpr_a = (float)((1500.0*100.0)/(1000000/PWM_FREQ);    //duty cycle of PWMxA = 0
     pwm_config.cmpr_b = 0;    //duty cycle of PWMxb = 0
     pwm_config.counter_mode = MCPWM_UP_COUNTER;
     pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
