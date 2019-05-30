@@ -72,6 +72,8 @@ int ch5_toggle = 0;
 int ch6_toggle = 0;
 int speedometer_toggle = 0;
 
+int cmd_throttle = 1500;
+int cmd_steering = 1500;
 // GLobal buffer for serial output
 char buff [50] = {};
 
@@ -264,8 +266,8 @@ void setLed (unsigned char lednum, unsigned char r, unsigned char g, unsigned ch
 
 void displayStatusOnLED (int status)
 {
-  static int _last_status = 0;
-  //if (status != _last_status) {
+  static int _last_status = -1;
+  if (status != _last_status) {
     _last_status = status;
 #ifdef DEBUG
     Serial.print("New status : ");
@@ -299,7 +301,7 @@ void displayStatusOnLED (int status)
       // fast green blink
       setLed (0,0x00,0xff,0x00,0x55);
     }
-  //}
+  }
 }
 void processStatusFromHost (const char *status) {
 
@@ -360,12 +362,26 @@ int getline() {
     len=UART_RX_BUFF_SIZE;
     return len;
 }
+
+void parseCommand (void) {
+  int a = 1500;
+  int b = 1500;
+  char c[200];
+  if (sscanf (cmd, "%d;%d;%s", &a, &b, c) == 3) {
+    cmd_throttle = a;
+    cmd_steering = b;
+    processStatusFromHost(c);
+  }
+}
+
 void readCommand(void * pvParameters ) {
   static int seq = 0;
   while(1) {
     if (getline(cmd, sizeof(cmd)) > 0 ) {
-      printf("Command received: %s\n", cmd);
+      parseCommand();
     }
+    mcpwm_set_throttle_pwm(cmd_throttle);
+    mcpwm_set_steering_pwm(cmd_steering);
     vTaskDelay(INTPUTLOOP / portTICK_PERIOD_MS);
   }
   vTaskDelete( NULL );
@@ -393,7 +409,7 @@ void app_main()
   switchOffLed();
   displayStatusOnLED(INT_DISCONNECTED);   
   xTaskCreate(&updateLed, "led_task", 2048, NULL, 5, NULL);
-  xTaskCreate(&readCommand, "led_rxuart", 2048, NULL, 5, NULL);
+  xTaskCreate(&readCommand, "rxuart_task", 2048, NULL, 5, NULL);
 
 
   mcpwm_set_throttle_pwm(1500);
