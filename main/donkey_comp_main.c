@@ -49,6 +49,7 @@
 
 //Each 50ms, check and output value to serial link
 #define OUTPUTLOOP 50
+#define INTPUTLOOP 100
 #define PWM_FREQ 125
 // Global var used to capture Rx signal
 unsigned int pwm_steering_value = 0;
@@ -287,11 +288,11 @@ void displayStatusOnLED (int status)
       setLed (0,0x00,0x00,0xFF,0x18);
     }
     if (status==INT_DISCONNECTED) {
-      // medium red blink
+      // fast red blink
       setLed (0,0xff,0x00,0x00,0x55);
     }
     if (status==INT_RXERROR) {
-      // fastred blink
+      // slow red blink
       setLed (0,0xff,0x00,0x00,0x33);
     }
     if (status==HOST_MODE_DISARMED) {
@@ -334,6 +335,16 @@ void timedCheckOutput()
   memset(pwm_length, 0, sizeof(pwm_length[0])*MAX_GPIO);   
 }
 
+void readCommand(void * pvParameters ) {
+  static int seq = 0;
+  static char cmd[50];
+  while(1) {
+    fgets(cmd, sizeof(cmd), stdin);
+    printf("Command received: %s\n", cmd);
+    vTaskDelay(INTPUTLOOP / portTICK_PERIOD_MS);
+  }
+  vTaskDelete( NULL );
+}
 //
 // MAIN
 //
@@ -346,6 +357,8 @@ void app_main()
   TaskHandle_t xHandle = NULL;
   
   uart_set_baudrate(UART_NUM_0, 2000000); 
+  const int uart_buffer_size = (1024 * 2);
+
   memset (leds, 0, sizeof(leds));
   mcpwm_init_control();
   init_rx_gpio();
@@ -355,6 +368,7 @@ void app_main()
   switchOffLed();
   displayStatusOnLED(INT_DISCONNECTED);   
   xTaskCreate(&updateLed, "led_task", 2048, NULL, 5, NULL);
+  xTaskCreate(&readCommand, "led_rxuart", 2048, NULL, 5, NULL);
 
 
   mcpwm_set_throttle_pwm(1500);
