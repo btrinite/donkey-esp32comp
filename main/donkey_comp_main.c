@@ -346,7 +346,7 @@ int getline(char * buff, int size) {
     for(;;) {
         c = fgetc(stdin);
         if(c == EOF)
-            break;
+            continue;
 
         if((*linep++ = c) == '\n')
             break;
@@ -363,7 +363,7 @@ void readCommand(void * pvParameters ) {
   static int seq = 0;
   static char cmd[50];
   while(1) {
-    if (getline(cmd, sizeof(cmd)) > 0) {
+    if (getline(cmd, sizeof(cmd)) > 0 ) {
       printf("Command received: %s\n", cmd);
     }
     vTaskDelay(INTPUTLOOP / portTICK_PERIOD_MS);
