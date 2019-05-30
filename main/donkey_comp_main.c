@@ -215,7 +215,7 @@ void init_led_gpio(void)
 // LED Part
 // --------------------------------------
 
-#define COMPCOLOR(r, g, b) (r<<16)|(g<<8)|(b)
+#define COMPCOLOR(r, g, b) (g<<16)|(r<<8)|(b)
 
 struct Led {
   unsigned char r;
@@ -264,7 +264,7 @@ void setLed (unsigned char lednum, unsigned char r, unsigned char g, unsigned ch
 void displayStatusOnLED (int status)
 {
   static int _last_status = 0;
-  if (status != _last_status) {
+  //if (status != _last_status) {
     _last_status = status;
 #ifdef DEBUG
     Serial.print("New status : ");
@@ -298,7 +298,7 @@ void displayStatusOnLED (int status)
       // fast green blink
       setLed (0,0x00,0xff,0x00,0x55);
     }
-  }
+  //}
 }
 void processStatusFromHost (const char *status) {
 
@@ -354,7 +354,8 @@ void app_main()
 
   switchOffLed();
   displayStatusOnLED(INT_DISCONNECTED);   
-  xTaskCreate( updateLed, "LED STATUS", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle );
+  xTaskCreate(&updateLed, "led_task", 2048, NULL, 5, NULL);
+
 
   mcpwm_set_throttle_pwm(1500);
   mcpwm_set_steering_pwm(1500);
