@@ -29,7 +29,7 @@
 #define MAX_GPIO 40
 
 // PIN used to drive NeoPixel LEDs
-#define LED_PIN         15
+#define LED_PIN         16
 #define NUM_LEDS        1
 #include "ws2812_control.h"
 
@@ -85,7 +85,7 @@ char buff [50] = {};
 #define PWM_RC_STEERING_INPUT_PIN   26   
 #define PWM_RC_CH5_INPUT_PIN        27
 #define PWM_RC_CH6_INPUT_PIN        14
-#define PWM_SPEEDOMETER_INPUT_PIN   12
+#define PWM_SPEEDOMETER_INPUT_PIN   17
 
 #define GPIO_INPUT_PIN_SEL  ((1ULL<<PWM_RC_STEERING_INPUT_PIN) | (1ULL<<PWM_RC_THROTTLE_INPUT_PIN) | (1ULL<<PWM_RC_CH5_INPUT_PIN) | (1ULL<<PWM_RC_CH6_INPUT_PIN) | (1ULL<<PWM_SPEEDOMETER_INPUT_PIN))
 
@@ -334,7 +334,7 @@ void app_main()
   displayStatusOnLED(INT_DISCONNECTED);   
 
   mcpwm_set_throttle_pwm(1500);
-  mcpwm_set_steering_pwm(2000);
+  mcpwm_set_steering_pwm(1500);
   // Set configuration of timer0 for high speed channels
   //
   while(1) {
