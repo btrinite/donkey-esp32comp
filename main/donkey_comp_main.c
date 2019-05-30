@@ -233,7 +233,7 @@ void switchOffLed() {
   }    
 }
 
-void updateLed(void * pvParameters )) {
+void updateLed(void * pvParameters ) {
   static int seq = 0;
 
   while(1) {
