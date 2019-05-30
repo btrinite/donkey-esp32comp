@@ -27,6 +27,7 @@
 #include "string.h"
 
 #define MAX_GPIO 40
+#define STACK_SIZE 200
 
 // PIN used to drive NeoPixel LEDs
 #include "ws2812_control.h"
