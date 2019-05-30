@@ -346,7 +346,7 @@ int getline(char * buff, int size) {
     for(;;) {
         c = fgetc(stdin);
         if(c == EOF)
-            continue;
+            return 0;
 
         if((*linep++ = c) == '\n')
             break;
