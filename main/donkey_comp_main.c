@@ -31,7 +31,7 @@
 // PIN used to drive NeoPixel LEDs
 #include "ws2812_control.h"
 
-#define GPIO_OUTPUT_LED    16
+#define GPIO_OUTPUT_LED    16 /*Keep it consistent with ws2812_control.h !!*/
 #define GPIO_OUTPUT_PIN_SEL  ((1ULL<<GPIO_OUTPUT_LED))// How many NeoPixels are attached to the Arduino?
 
 #define TIMESTEPS      8 
@@ -233,7 +233,7 @@ void switchOffLed() {
   }    
 }
 
-void updateLed() {
+void updateLed(void * pvParameters )) {
   static int seq = 0;
 
   while(1) {
@@ -341,7 +341,9 @@ void app_main()
 {
   int tick=0;
   struct led_state new_state;
-
+  static uint8_t ucParameterToPass;
+  TaskHandle_t xHandle = NULL;
+  
   uart_set_baudrate(UART_NUM_0, 2000000); 
   memset (leds, 0, sizeof(leds));
   mcpwm_init_control();
@@ -351,6 +353,7 @@ void app_main()
 
   switchOffLed();
   displayStatusOnLED(INT_DISCONNECTED);   
+  xTaskCreate( updateLed, "LED STATUS", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle );
 
   mcpwm_set_throttle_pwm(1500);
   mcpwm_set_steering_pwm(1500);
