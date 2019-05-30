@@ -335,11 +335,35 @@ void timedCheckOutput()
   memset(pwm_length, 0, sizeof(pwm_length[0])*MAX_GPIO);   
 }
 
+char * getline(char * buff, int size) {
+    char  * linep = buff;
+    size_t lenmax = size, len = lenmax;
+    int c;
+
+    if(buff == NULL)
+        return NULL;
+
+    for(;;) {
+        c = fgetc(stdin);
+        if(c == EOF)
+            break;
+
+        if((*linep++ = c) == '\n')
+            break;
+
+        if(--len <= 1) {
+          break;        
+        }
+
+    }
+    *linep = '\0';
+    return buff;
+}
 void readCommand(void * pvParameters ) {
   static int seq = 0;
   static char cmd[50];
   while(1) {
-    if (fgets(cmd, sizeof(cmd), stdin) != NULL) {
+    if (getline(cmd, sizeof(cmd)) != NULL) {
       printf("Command received: %s\n", cmd);
     }
     vTaskDelay(INTPUTLOOP / portTICK_PERIOD_MS);
