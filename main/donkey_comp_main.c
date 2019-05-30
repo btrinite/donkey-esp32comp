@@ -323,7 +323,7 @@ void timedCheckOutput()
 {
   uint32_t t = esp_timer_get_time()/1000;
   if (pwm_length[PWM_RC_THROTTLE_INPUT_PIN] == 0) {
-    sprintf(buff, "%d,-1,-1,-1,-1,-1,-1\n", t);
+    sprintf(buff, "%d,-1,-1,-1,-1,-1\n", t);
      displayStatusOnLED(INT_RXERROR);   
   } else {
     sprintf(buff, "%d,%d,%d,%d,%d,%d\n", t, 
@@ -367,7 +367,7 @@ void parseCommand (void) {
   int a = 1500;
   int b = 1500;
   char c[200];
-  if (sscanf (cmd, "%d;%d;%s", &a, &b, c) == 3) {
+  if (sscanf (cmd, "%d,%d,%s", &a, &b, c) == 3) {
     cmd_throttle = a;
     cmd_steering = b;
     processStatusFromHost(c);
