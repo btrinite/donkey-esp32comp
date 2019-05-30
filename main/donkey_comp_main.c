@@ -29,8 +29,9 @@
 #define MAX_GPIO 40
 
 // PIN used to drive NeoPixel LEDs
-#define LED_PIN         16
-#define NUM_LEDS        1
+#define LED_RMT_TX_GPIO     16
+#define LED_RMT_TX_CHANNEL  RMT_CHANNEL_0
+#define NUM_LEDS            1
 #include "ws2812_control.h"
 
 // How many NeoPixels are attached to the Arduino?
