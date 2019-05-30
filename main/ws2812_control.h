@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #ifndef NUM_LEDS
-#define NUM_LEDS 8
+#define NUM_LEDS 1
 #endif
 
 // This structure is used for indicating what the colors of each LED should be set to.

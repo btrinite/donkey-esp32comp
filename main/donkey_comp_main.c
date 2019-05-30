@@ -29,12 +29,11 @@
 #define MAX_GPIO 40
 
 // PIN used to drive NeoPixel LEDs
-#define LED_RMT_TX_GPIO     16
-#define LED_RMT_TX_CHANNEL  RMT_CHANNEL_0
-#define NUM_LEDS            1
 #include "ws2812_control.h"
 
-// How many NeoPixels are attached to the Arduino?
+#define GPIO_OUTPUT_LED    16
+#define GPIO_OUTPUT_PIN_SEL  ((1ULL<<GPIO_OUTPUT_LED))// How many NeoPixels are attached to the Arduino?
+
 #define TIMESTEPS      8 
 
 // Statuses
@@ -195,6 +194,22 @@ void init_rx_gpio (void)
     gpio_isr_handler_add(PWM_SPEEDOMETER_INPUT_PIN, gpio_isr_handler, (void*) PWM_SPEEDOMETER_INPUT_PIN);
 }
 
+void init_led_gpio(void)
+{
+    gpio_config_t io_conf;
+    //disable interrupt
+    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    //bit mask of the pins that you want to set,e.g.GPIO18/19
+    io_conf.pin_bit_mask = GPIO_OUTPUT_LED;
+    //disable pull-down mode
+    io_conf.pull_down_en = 1;
+    //disable pull-up mode
+    io_conf.pull_up_en = 0;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+}
 // --------------------------------------
 // LED Part
 // --------------------------------------
@@ -257,7 +272,6 @@ void displayStatusOnLED (int status)
     if (status==INT_CALIBRATE) {
       // fast white blink
       setLed (0,0xff,0xff,0xff,0x55);
-      setLed (1,0xff,0xff,0xff,0x55);
     }
     if (status==HOST_INIT) {
       // Slow red blink
@@ -326,11 +340,15 @@ void timedCheckOutput()
 void app_main()
 {
   int tick=0;
+  struct led_state new_state;
+
   uart_set_baudrate(UART_NUM_0, 2000000); 
   memset (leds, 0, sizeof(leds));
-  ws2812_control_init();
   mcpwm_init_control();
   init_rx_gpio();
+  init_led_gpio();
+  ws2812_control_init();
+
   switchOffLed();
   displayStatusOnLED(INT_DISCONNECTED);   
 
