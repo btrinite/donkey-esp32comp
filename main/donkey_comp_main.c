@@ -335,13 +335,12 @@ void timedCheckOutput()
   memset(pwm_length, 0, sizeof(pwm_length[0])*MAX_GPIO);   
 }
 
-int getline(char * buff, int size) {
-    char  * linep = buff;
-    size_t lenmax = size, len = lenmax;
+#define UART_RX_BUFF_SIZE 100
+static char cmd[UART_RX_BUFF_SIZE];
+char  * linep = cmd;
+int len=UART_RX_BUFF_SIZE;
+int getline() {
     int c;
-
-    if(buff == NULL)
-        return NULL;
 
     for(;;) {
         c = fgetc(stdin);
@@ -357,11 +356,12 @@ int getline(char * buff, int size) {
 
     }
     *linep = '\0';
+    linep = cmd;
+    len=UART_RX_BUFF_SIZE;
     return len;
 }
 void readCommand(void * pvParameters ) {
   static int seq = 0;
-  static char cmd[50];
   while(1) {
     if (getline(cmd, sizeof(cmd)) > 0 ) {
       printf("Command received: %s\n", cmd);
