@@ -49,7 +49,7 @@
 
 //Each 50ms, check and output value to serial link
 #define OUTPUTLOOP 50
-#define INTPUTLOOP 100
+#define INTPUTLOOP 500
 #define PWM_FREQ 125
 // Global var used to capture Rx signal
 unsigned int pwm_steering_value = 0;
@@ -379,9 +379,9 @@ void readCommand(void * pvParameters ) {
   while(1) {
     if (getline(cmd, sizeof(cmd)) > 0 ) {
       parseCommand();
+      mcpwm_set_throttle_pwm(cmd_throttle);
+      mcpwm_set_steering_pwm(cmd_steering);
     }
-    mcpwm_set_throttle_pwm(cmd_throttle);
-    mcpwm_set_steering_pwm(cmd_steering);
     vTaskDelay(INTPUTLOOP / portTICK_PERIOD_MS);
   }
   vTaskDelete( NULL );
