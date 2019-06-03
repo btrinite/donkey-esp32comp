@@ -49,7 +49,7 @@
 
 //Each 50ms, check and output value to serial link
 #define OUTPUTLOOP 50
-#define INTPUTLOOP 1
+#define INTPUTLOOP 10
 #define PWM_FREQ 125
 // Global var used to capture Rx signal
 unsigned int pwm_steering_value = 0;
