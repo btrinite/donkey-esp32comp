@@ -48,7 +48,7 @@
  
 
 //Each 50ms, check and output value to serial link
-#define OUTPUTLOOP 10
+#define OUTPUTLOOP 30
 #define INTPUTLOOP 10
 #define PWM_FREQ 125
 // Global var used to capture Rx signal
