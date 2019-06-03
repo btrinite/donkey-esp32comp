@@ -321,7 +321,7 @@ void processStatusFromHost (const char *status) {
 
 void timedCheckOutput()
 {
-  uint32_t t = esp_timer_get_time()/1000;
+  uint32_t t = (esp_timer_get_time()/1000)%50000;
   if (pwm_length[PWM_RC_THROTTLE_INPUT_PIN] == 0) {
     sprintf(buff, "%d,-1,-1,-1,-1,-1\n", t);
      displayStatusOnLED(INT_RXERROR);   
