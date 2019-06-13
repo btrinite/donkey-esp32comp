@@ -16,6 +16,8 @@
 #include "driver/mcpwm.h"
 #include "driver/uart.h"
 #include "driver/rmt.h"
+#include <driver/adc.h>
+#include "esp_adc_cal.h"
 
 #include "soc/mcpwm_reg.h"
 #include "soc/mcpwm_struct.h"
@@ -76,6 +78,12 @@ int cmd_throttle = 1500;
 int cmd_steering = 1500;
 // GLobal buffer for serial output
 char buff [50] = {};
+
+/* Sensor */
+#define DISTANCE_FRONT_LEFT ADC1_CHANNEL_2
+#define DISTANCE_FRONT_RIGHT ADC1_CHANNEL_3
+unsigned int dst_sensor_left = 0;
+unsigned int dst_sensor_right = 0;
 
 /*PWM based on */
 
@@ -323,15 +331,17 @@ void timedCheckOutput()
 {
   uint32_t t = (esp_timer_get_time()/1000)%50000;
   if (pwm_length[PWM_RC_THROTTLE_INPUT_PIN] == 0) {
-    sprintf(buff, "%d,-1,-1,-1,-1,-1\n", t);
+    sprintf(buff, "%d,-1,-1,-1,-1,-1,-1,-1\n", t);
      displayStatusOnLED(INT_RXERROR);   
   } else {
-    sprintf(buff, "%d,%d,%d,%d,%d,%d\n", t, 
+    sprintf(buff, "%d,%d,%d,%d,%d,%d,%d,%d\n", t, 
     pwm_length[PWM_RC_THROTTLE_INPUT_PIN], 
     pwm_length[PWM_RC_STEERING_INPUT_PIN], 
     pwm_length[PWM_RC_CH5_INPUT_PIN], 
     pwm_length[PWM_RC_CH6_INPUT_PIN],
-    pwm_length[PWM_SPEEDOMETER_INPUT_PIN]);
+    pwm_length[PWM_SPEEDOMETER_INPUT_PIN],
+    dst_sensor_left,
+    dst_sensor_right);
   }
   printf(buff);    
   memset(pwm_length, 0, sizeof(pwm_length[0])*MAX_GPIO);   
@@ -390,6 +400,19 @@ void readCommand(void * pvParameters ) {
 // MAIN
 //
 
+void sensor_init()
+{
+  adc1_config_width(ADC_WIDTH_BIT_9);
+  adc1_config_channel_atten(DISTANCE_FRONT_LEFT,ADC_ATTEN_DB_11);
+  adc1_config_channel_atten(DISTANCE_FRONT_RIGHT,ADC_ATTEN_DB_11);
+}
+
+void get_sensor()
+{
+  dst_sensor_left =  adc1_get_raw(DISTANCE_FRONT_LEFT);
+  dst_sensor_right =  adc1_get_raw(DISTANCE_FRONT_RIGHT);
+}
+
 void app_main()
 {
   int tick=0;
@@ -405,6 +428,7 @@ void app_main()
   init_rx_gpio();
   init_led_gpio();
   ws2812_control_init();
+  sensor_init();
 
   switchOffLed();
   displayStatusOnLED(INT_DISCONNECTED);   
