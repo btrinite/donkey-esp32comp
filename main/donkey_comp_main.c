@@ -80,8 +80,8 @@ int cmd_steering = 1500;
 char buff [50] = {};
 
 /* Sensor */
-#define DISTANCE_FRONT_LEFT ADC1_CHANNEL_2
-#define DISTANCE_FRONT_RIGHT ADC1_CHANNEL_3
+#define DISTANCE_FRONT_LEFT ADC1_CHANNEL_6
+#define DISTANCE_FRONT_RIGHT ADC1_CHANNEL_7
 unsigned int dst_sensor_left = 0;
 unsigned int dst_sensor_right = 0;
 
