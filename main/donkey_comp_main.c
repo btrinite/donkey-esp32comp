@@ -384,6 +384,8 @@ void parseCommand (void) {
   }
 }
 
+void get_sensor();
+
 void readCommand(void * pvParameters ) {
   static int seq = 0;
   while(1) {
