@@ -387,6 +387,7 @@ void parseCommand (void) {
 void readCommand(void * pvParameters ) {
   static int seq = 0;
   while(1) {
+    get_sensor();
     if (getline(cmd, sizeof(cmd)) > 0 ) {
       parseCommand();
       mcpwm_set_throttle_pwm(cmd_throttle);
